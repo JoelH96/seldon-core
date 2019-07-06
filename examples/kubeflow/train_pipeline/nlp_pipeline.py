@@ -32,12 +32,13 @@ def nlp_pipeline(
       name='my-pvc',
       resource_name="my-pvc",
       modes=["ReadWriteMany"],
+      storage_class="nfs-client",
       size="1Gi"
     )
 
     download_step = dsl.ContainerOp(
         name='data_downloader',
-        image='data_downloader:0.1',
+        image='gcr.io/dev-joel/data_downloader:0.1',
         command="python",
         arguments=[
             "/microservice/pipeline_step.py",
@@ -53,7 +54,7 @@ def nlp_pipeline(
 
     clean_step = dsl.ContainerOp(
         name='clean_text',
-        image='clean_text_transformer:0.1',
+        image='gcr.io/dev-joel/clean_text_transformer:0.1',
         command="python",
         arguments=[
             "/microservice/pipeline_step.py",
@@ -65,7 +66,7 @@ def nlp_pipeline(
 
     tokenize_step = dsl.ContainerOp(
         name='tokenize',
-        image='spacy_tokenizer:0.1',
+        image='gcr.io/dev-joel/spacy_tokenizer:0.1',
         command="python",
         arguments=[
             "/microservice/pipeline_step.py",
@@ -77,7 +78,7 @@ def nlp_pipeline(
 
     vectorize_step = dsl.ContainerOp(
         name='vectorize',
-        image='tfidf_vectorizer:0.1',
+        image='gcr.io/dev-joel/tfidf_vectorizer:0.1',
         command="python",
         arguments=[
             "/microservice/pipeline_step.py",
@@ -93,7 +94,7 @@ def nlp_pipeline(
 
     predict_step = dsl.ContainerOp(
         name='predictor',
-        image='lr_text_classifier:0.1',
+        image='gcr.io/dev-joel/lr_text_classifier:0.1',
         command="python",
         arguments=[
             "/microservice/pipeline_step.py",
@@ -108,10 +109,10 @@ def nlp_pipeline(
     )
 
     try:
-        seldon_config = yaml.load(open("../deploy_pipeline/seldon_production_pipeline.yaml"))
+        seldon_config = yaml.load(open("../deploy_pipeline/seldon_production_pipeline.yaml"), Loader=yaml.FullLoader)
     except:
         # If this file is run from the project core directory 
-        seldon_config = yaml.load(open("deploy_pipeline/seldon_production_pipeline.yaml"))
+        seldon_config = yaml.load(open("deploy_pipeline/seldon_production_pipeline.yaml"), Loader=yaml.FullLoader)
 
     deploy_step = dsl.ResourceOp(
         name="seldondeploy",

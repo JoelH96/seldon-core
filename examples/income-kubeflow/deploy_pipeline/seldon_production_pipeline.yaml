@@ -1,0 +1,45 @@
+---
+apiVersion: machinelearning.seldon.io/v1alpha2
+kind: SeldonDeployment
+metadata:
+  labels:
+    app: seldon
+  name: "seldon-deployment-{{workflow.name}}"
+  namespace: kubeflow
+spec:
+  annotations:
+    project_name: Income Classifier Pipeline
+    deployment_version: v1
+  name: "seldon-deployment-{{workflow.name}}"
+  oauth_key: oauth-key
+  oauth_secret: oauth-secret
+  predictors:
+  - componentSpecs:
+    - spec:
+        containers:
+        - image: gcr.io/dev-joel/income_classifier:0.1
+          imagePullPolicy: Always
+          name: incomeclassifier
+          volumeMounts:
+          - name: mypvc
+            mountPath: /mnt
+        terminationGracePeriodSeconds: 20
+        volumes:
+        - name: mypvc
+          persistentVolumeClaim:
+            claimName: "{{workflow.name}}-my-pvc"
+    graph:
+      children:
+      - name: incomeclassifier
+        endpoint:
+          type: REST
+        type: MODEL
+      name: incomeclassifier
+      endpoint:
+        type: REST
+      type: MODEL
+    name: single-model
+    replicas: 1
+    annotations:
+      predictor_version: v1
+

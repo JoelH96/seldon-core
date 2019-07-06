@@ -17,13 +17,13 @@ spec:
   - componentSpecs:
     - spec:
         containers:
-        - image: clean_text_transformer:0.1
+        - image: gcr.io/dev-joel/clean_text_transformer:0.1
           imagePullPolicy: IfNotPresent
           name: cleantext
           resources:
             requests:
               memory: 1Mi
-        - image: spacy_tokenizer:0.1
+        - image: gcr.io/dev-joel/spacy_tokenizer:0.1
           imagePullPolicy: IfNotPresent
           name: spacytokenizer
         - image: tfidf_vectorizer:0.1
@@ -32,7 +32,7 @@ spec:
           volumeMounts:
           - name: mypvc
             mountPath: /mnt
-        - image: lr_text_classifier:0.1
+        - image: gcr.io/dev-joel/lr_text_classifier:0.1
           imagePullPolicy: IfNotPresent
           name: lrclassifier
           volumeMounts:

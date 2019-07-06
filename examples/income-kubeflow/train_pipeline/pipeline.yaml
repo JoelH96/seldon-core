@@ -1,0 +1,124 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: income-classifier-
+spec:
+  arguments:
+    parameters:
+    - name: preprocessor-path
+      value: /mnt/preprocessor.model
+    - name: model-path
+      value: /mnt/income_class.model
+    - name: out-path
+      value: /mnt/clf_prediction.data
+  entrypoint: income-classifier
+  serviceAccountName: pipeline-runner
+  templates:
+  - dag:
+      tasks:
+      - name: my-pvc
+        template: my-pvc
+      - arguments:
+          parameters:
+          - name: model-path
+            value: '{{inputs.parameters.model-path}}'
+          - name: my-pvc-name
+            value: '{{tasks.my-pvc.outputs.parameters.my-pvc-name}}'
+          - name: out-path
+            value: '{{inputs.parameters.out-path}}'
+          - name: preprocessor-path
+            value: '{{inputs.parameters.preprocessor-path}}'
+        dependencies:
+        - my-pvc
+        name: predictor
+        template: predictor
+      - dependencies:
+        - predictor
+        name: seldondeploy
+        template: seldondeploy
+    inputs:
+      parameters:
+      - name: model-path
+      - name: out-path
+      - name: preprocessor-path
+    name: income-classifier
+  - name: my-pvc
+    outputs:
+      parameters:
+      - name: my-pvc-manifest
+        valueFrom:
+          jsonPath: '{}'
+      - name: my-pvc-name
+        valueFrom:
+          jsonPath: '{.metadata.name}'
+      - name: my-pvc-size
+        valueFrom:
+          jsonPath: '{.status.capacity.storage}'
+    resource:
+      action: create
+      manifest: "apiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: '{{workflow.name}}-my-pvc'\n\
+        spec:\n  accessModes:\n  - ReadWriteMany\n  resources:\n    requests:\n  \
+        \    storage: 1Gi\n  storageClassName: nfs-client\n"
+  - container:
+      args:
+      - /microservice/pipeline_step.py
+      - --preprocessor-path
+      - '{{inputs.parameters.preprocessor-path}}'
+      - --model-path
+      - '{{inputs.parameters.model-path}}'
+      - --out-path
+      - '{{inputs.parameters.out-path}}'
+      - --action
+      - train
+      command:
+      - python
+      image: gcr.io/dev-joel/income_classifier:0.1
+      imagePullPolicy: Always
+      volumeMounts:
+      - mountPath: /mnt
+        name: my-pvc
+    inputs:
+      parameters:
+      - name: model-path
+      - name: my-pvc-name
+      - name: out-path
+      - name: preprocessor-path
+    name: predictor
+    outputs:
+      artifacts:
+      - name: mlpipeline-ui-metadata
+        optional: true
+        path: /mlpipeline-ui-metadata.json
+      - name: mlpipeline-metrics
+        optional: true
+        path: /mlpipeline-metrics.json
+  - name: seldondeploy
+    outputs:
+      parameters:
+      - name: seldondeploy-manifest
+        valueFrom:
+          jsonPath: '{}'
+      - name: seldondeploy-name
+        valueFrom:
+          jsonPath: '{.metadata.name}'
+    resource:
+      action: create
+      manifest: "apiVersion: machinelearning.seldon.io/v1alpha2\nkind: SeldonDeployment\n\
+        metadata:\n  labels:\n    app: seldon\n  name: seldon-deployment-{{workflow.name}}\n\
+        \  namespace: kubeflow\nspec:\n  annotations:\n    deployment_version: v1\n\
+        \    project_name: Income Classifier Pipeline\n  name: seldon-deployment-{{workflow.name}}\n\
+        \  oauth_key: oauth-key\n  oauth_secret: oauth-secret\n  predictors:\n  -\
+        \ annotations:\n      predictor_version: v1\n    componentSpecs:\n    - spec:\n\
+        \        containers:\n        - image: gcr.io/dev-joel/income_classifier:0.1\n\
+        \          imagePullPolicy: Always\n          name: incomeclassifier\n   \
+        \       volumeMounts:\n          - mountPath: /mnt\n            name: mypvc\n\
+        \        terminationGracePeriodSeconds: 20\n        volumes:\n        - name:\
+        \ mypvc\n          persistentVolumeClaim:\n            claimName: '{{workflow.name}}-my-pvc'\n\
+        \    graph:\n      children:\n      - endpoint:\n          type: REST\n  \
+        \      name: incomeclassifier\n        type: MODEL\n      endpoint:\n    \
+        \    type: REST\n      name: incomeclassifier\n      type: MODEL\n    name:\
+        \ single-model\n    replicas: 1\n"
+  volumes:
+  - name: my-pvc
+    persistentVolumeClaim:
+      claimName: '{{inputs.parameters.my-pvc-name}}'
