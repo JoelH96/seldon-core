@@ -29,11 +29,7 @@ spec:
           persistentVolumeClaim:
             claimName: "{{workflow.name}}-my-pvc"
     graph:
-      children:
-      - name: incomeclassifier
-        endpoint:
-          type: REST
-        type: MODEL
+      children: []
       name: incomeclassifier
       endpoint:
         type: REST

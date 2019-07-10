@@ -5,6 +5,8 @@ metadata:
 spec:
   arguments:
     parameters:
+    - name: tabular-data
+      value: /mnt/tabular_data.data
     - name: preprocessor-path
       value: /mnt/preprocessor.model
     - name: model-path
@@ -28,6 +30,8 @@ spec:
             value: '{{inputs.parameters.out-path}}'
           - name: preprocessor-path
             value: '{{inputs.parameters.preprocessor-path}}'
+          - name: tabular-data
+            value: '{{inputs.parameters.tabular-data}}'
         dependencies:
         - my-pvc
         name: predictor
@@ -41,6 +45,7 @@ spec:
       - name: model-path
       - name: out-path
       - name: preprocessor-path
+      - name: tabular-data
     name: income-classifier
   - name: my-pvc
     outputs:
@@ -62,6 +67,8 @@ spec:
   - container:
       args:
       - /microservice/pipeline_step.py
+      - --tabular-data
+      - '{{inputs.parameters.tabular-data}}'
       - --preprocessor-path
       - '{{inputs.parameters.preprocessor-path}}'
       - --model-path
@@ -83,6 +90,7 @@ spec:
       - name: my-pvc-name
       - name: out-path
       - name: preprocessor-path
+      - name: tabular-data
     name: predictor
     outputs:
       artifacts:
@@ -114,10 +122,9 @@ spec:
         \       volumeMounts:\n          - mountPath: /mnt\n            name: mypvc\n\
         \        terminationGracePeriodSeconds: 20\n        volumes:\n        - name:\
         \ mypvc\n          persistentVolumeClaim:\n            claimName: '{{workflow.name}}-my-pvc'\n\
-        \    graph:\n      children:\n      - endpoint:\n          type: REST\n  \
-        \      name: incomeclassifier\n        type: MODEL\n      endpoint:\n    \
-        \    type: REST\n      name: incomeclassifier\n      type: MODEL\n    name:\
-        \ single-model\n    replicas: 1\n"
+        \    graph:\n      children: []\n      endpoint:\n        type: REST\n   \
+        \   name: incomeclassifier\n      type: MODEL\n    name: single-model\n  \
+        \  replicas: 1\n"
   volumes:
   - name: my-pvc
     persistentVolumeClaim:

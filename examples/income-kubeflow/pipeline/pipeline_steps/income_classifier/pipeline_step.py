@@ -11,6 +11,7 @@ from alibi.datasets import adult
 
 
 @click.command()
+@click.option('--tabular-data', default="/mnt/tabular_data.data")
 @click.option('--preprocessor-path', default="/mnt/preprocessor.model")
 @click.option('--model-path', default="/mnt/income_class.model")
 @click.option('--out-path', default="/mnt/clf_prediction.data")
@@ -18,26 +19,26 @@ from alibi.datasets import adult
         type=click.Choice(['predict', 'train']))
 
 def run_pipeline(
+        tabular_data,
         preprocessor_path,
         model_path,
         out_path, 
         action):
 
-    # load data
-    data, labels, feature_names, category_map = adult()
-
-    # define train and test set
-    np.random.seed(0)
-    data_perm = np.random.permutation(np.c_[data, labels])
-    data = data_perm[:, :-1]
-    labels = data_perm[:, -1]
-
-    idx = 30000
-    X_train, Y_train = data[:idx, :], labels[:idx]
-    X_test, Y_test = data[idx + 1:, :], labels[idx + 1:]
-
-
     if action == "train":
+
+        # load data
+        data, labels, feature_names, category_map = adult()
+
+        # define train and test set
+        np.random.seed(0)
+        data_perm = np.random.permutation(np.c_[data, labels])
+        data = data_perm[:, :-1]
+        labels = data_perm[:, -1]
+
+        idx = 30000
+        X_train, Y_train = data[:idx, :], labels[:idx]
+        X_test, Y_test = data[idx + 1:, :], labels[idx + 1:]
 
         # feature transformation pipeline
         ordinal_features = [x for x in range(len(feature_names)) if x not in list(category_map.keys())]
@@ -67,6 +68,12 @@ def run_pipeline(
     elif action == "predict":
         with open(model_path, "rb") as model_f:
             clf = dill.load(model_f)
+
+        with open(preprocessor_path, "rb") as pre_process:
+            preprocessor = dill.load(pre_process)
+
+        with open(tabular_data, 'rb') as tab_data:
+            X_test = dill.load(tab_data)
 
     # Make a prediction
     y = clf.predict_proba(preprocessor.transform(X_test))

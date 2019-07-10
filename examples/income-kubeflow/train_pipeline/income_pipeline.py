@@ -9,7 +9,8 @@ from kubernetes import client as k8s
   description='A pipeline demonstrating reproducible steps for NLP'
 )
 def income_pipeline(
-        preprocessor_path="/mnt/preprocessor.model",
+        tabular_data="/mnt/tabular_data.data",
+	preprocessor_path="/mnt/preprocessor.model",
         model_path="/mnt/income_class.model",
         out_path="/mnt/clf_prediction.data"):
     """
@@ -29,6 +30,7 @@ def income_pipeline(
 	    command="python",
         arguments=[
             "/microservice/pipeline_step.py",
+	    "--tabular-data", tabular_data,
             "--preprocessor-path", preprocessor_path,
             "--model-path", model_path,
             "--out-path", out_path,
